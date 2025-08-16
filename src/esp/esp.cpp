@@ -21,6 +21,7 @@ float esp::line_thickness = 2.0f;
 bool esp::use_cache = true;
 bool esp::use_batch_skeleton = true;  // NEW: Enable batch skeleton by default
 bool esp::show_net_id = false;
+bool esp::show_health_bar = true;
 
 // Enhanced skeleton data structure for caching
 struct CachedSkeletonData {
@@ -261,6 +262,14 @@ void esp::set_show_net_id(bool show) {
 
 bool esp::get_show_net_id() {
     return show_net_id;
+}
+
+void esp::set_show_health_bar(bool show) {
+    show_health_bar = show;
+}
+
+bool esp::get_show_health_bar() {
+    return show_health_bar;
 }
 
 // NEW: Batch skeleton reading implementation
@@ -608,9 +617,43 @@ void draw_player_info(const Vec2& screen_pos, const PedData& ped_data) {
     ImVec2 text_size = ImGui::CalcTextSize(text.c_str());
 
     // Draw text with a black outline for better visibility
-    ImVec2 text_pos = ImVec2(screen_pos.x - text_size.x / 2, screen_pos.y + 10);
-    draw_list->AddText(ImVec2(text_pos.x + 1, text_pos.y + 1), IM_COL32_BLACK, text.c_str());
-    draw_list->AddText(text_pos, IM_COL32_WHITE, text.c_str());
+    ImVec2 text_pos = ImVec2(screen_pos.x - text_size.x / 2, screen_pos.y - 30);
+    draw_list->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 1.2f, ImVec2(text_pos.x + 1, text_pos.y + 1), IM_COL32_BLACK, text.c_str());
+    draw_list->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 1.2f, text_pos, IM_COL32_WHITE, text.c_str());
+}
+
+void esp::draw_health_bar(const Vec2& screen_pos, float health, float max_health) {
+    if (!show_health_bar) return;
+
+    ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+
+    float height = 50.0f;
+    float width = 5.0f;
+    float margin = 15.0f;
+
+    Vec2 bar_start = { screen_pos.x - margin - width, screen_pos.y - height / 2 };
+    Vec2 bar_end = { screen_pos.x - margin, screen_pos.y + height / 2 };
+
+    // Background
+    draw_list->AddRectFilled(ImVec2(bar_start.x, bar_start.y), ImVec2(bar_end.x, bar_end.y), IM_COL32(0, 0, 0, 180));
+
+    // Health
+    float health_percent = health / max_health;
+    if (health_percent < 0.0f) health_percent = 0.0f;
+    if (health_percent > 1.0f) health_percent = 1.0f;
+
+    ImU32 health_color = IM_COL32(
+        (int)(255 * (1.0f - health_percent)), // Red
+        (int)(255 * health_percent),         // Green
+        0,                                  // Blue
+        255                                 // Alpha
+    );
+
+    float health_height = height * health_percent;
+    draw_list->AddRectFilled(ImVec2(bar_start.x, bar_end.y - health_height), ImVec2(bar_end.x, bar_end.y), health_color);
+
+    // Outline
+    draw_list->AddRect(ImVec2(bar_start.x, bar_start.y), ImVec2(bar_end.x, bar_end.y), IM_COL32_BLACK);
 }
 
 // Main rendering dispatcher - chooses between head circle or skeleton
@@ -704,6 +747,7 @@ void esp::draw_head_circle_cached(uintptr_t ped, Matrix viewport, uintptr_t loca
         );
 
         draw_player_info(head_screen_pos, cached_ped_data);
+        draw_health_bar(head_screen_pos, cached_ped_data.health);
     }
 }
 
@@ -832,6 +876,7 @@ void esp::draw_skeleton_cached(uintptr_t ped, Matrix viewport, uintptr_t localpl
 
     if (on_screen[0]) {
         draw_player_info(screen_positions[0], cached_ped_data);
+        draw_health_bar(screen_positions[0], cached_ped_data.health);
     }
 
     // Cleanup old cache entries periodically

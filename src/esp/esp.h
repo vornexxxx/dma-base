@@ -28,6 +28,7 @@ namespace esp {
     extern bool use_cache;
     extern bool use_batch_skeleton;  // NEW: Toggle for batch skeleton reading
     extern bool show_net_id;
+    extern bool show_health_bar;
 
     // Enhanced bone data structure for caching
     struct CachedBoneData {
@@ -69,6 +70,8 @@ namespace esp {
     void DrawDebugLine(const Vec2& from, const Vec2& to, ImU32 color);
     void DrawDebugText(const Vec2& pos, const char* text, ImU32 color);
     void DrawDebugCircle(const Vec2& center, float radius, ImU32 color);
+    void draw_health_bar(const Vec2& screen_pos, float health, float max_health = 100.0f);
+
 
     // Enhanced bone cache class with intelligent caching
     class BoneCache {
@@ -168,6 +171,8 @@ namespace esp {
     void set_use_batch_skeleton(bool use_batch);  // NEW
     void set_show_net_id(bool show);
     bool get_show_net_id();
+    void set_show_health_bar(bool show);
+    bool get_show_health_bar();
 
     ImU32 get_circle_color();
     ImU32 get_skeleton_color();
