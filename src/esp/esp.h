@@ -27,6 +27,7 @@ namespace esp {
     extern float line_thickness;
     extern bool use_cache;
     extern bool use_batch_skeleton;  // NEW: Toggle for batch skeleton reading
+    extern bool show_net_id;
 
     // Enhanced bone data structure for caching
     struct CachedBoneData {
@@ -95,12 +96,12 @@ namespace esp {
         bool is_data_valid(uintptr_t ped) const;
         size_t get_cache_size() const { return cached_bone_data.size(); }
 
-        
+
     };
 
     bool get_skeleton_bones_for_ped(uintptr_t ped, std::vector<Vec3>& bone_positions, bool force_refresh = false);
 
-    
+
     // Global bone cache instance
     extern BoneCache bone_cache;
 
@@ -165,6 +166,8 @@ namespace esp {
     void set_skeleton_color(ImU32 color);
     void set_line_thickness(float thickness);
     void set_use_batch_skeleton(bool use_batch);  // NEW
+    void set_show_net_id(bool show);
+    bool get_show_net_id();
 
     ImU32 get_circle_color();
     ImU32 get_skeleton_color();

@@ -460,6 +460,11 @@ void Overlay::Render()
 					}
 				}
 
+				bool show_id = esp::get_show_net_id();
+				if (ImGui::Checkbox("Show Player Net ID", &show_id)) {
+					esp::set_show_net_id(show_id);
+				}
+
 
 				ImGui::Separator();
 
@@ -479,11 +484,11 @@ void Overlay::Render()
 
 		// Aimbot Settings Tab
 		if (ImGui::BeginTabItem("Aimbot Settings")) {
-		
+
 			ImGui::EndTabItem();
 		}
 
-		
+
 		// Build Information Section
 		if (ImGui::BeginTabItem("Build Information")) {
 			int build_version = FiveM::GetCurrentBuildVersion();

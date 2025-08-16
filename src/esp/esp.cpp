@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <Memory/Memory.h>
+#include <string>
 
 // Initialize global instances
 esp::BoneCache esp::bone_cache;
@@ -19,6 +20,7 @@ ImU32 esp::skeleton_color = IM_COL32(255, 0, 0, 255); // Red skeleton
 float esp::line_thickness = 2.0f;
 bool esp::use_cache = true;
 bool esp::use_batch_skeleton = true;  // NEW: Enable batch skeleton by default
+bool esp::show_net_id = false;
 
 // Enhanced skeleton data structure for caching
 struct CachedSkeletonData {
@@ -251,6 +253,14 @@ std::vector<const char*> esp::get_esp_mode_names() {
         "Head Circle",
         "Skeleton Bones"
     };
+}
+
+void esp::set_show_net_id(bool show) {
+    show_net_id = show;
+}
+
+bool esp::get_show_net_id() {
+    return show_net_id;
 }
 
 // NEW: Batch skeleton reading implementation
@@ -589,6 +599,20 @@ void esp::render_head_circle_esp_batch() {
     bone_cache.cleanup_old_entries();
 }
 
+void draw_player_info(const Vec2& screen_pos, const PedData& ped_data) {
+    if (!esp::show_net_id || ped_data.netId <= 0) {
+        return;
+    }
+    ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+    std::string text = "ID: " + std::to_string(ped_data.netId);
+    ImVec2 text_size = ImGui::CalcTextSize(text.c_str());
+
+    // Draw text with a black outline for better visibility
+    ImVec2 text_pos = ImVec2(screen_pos.x - text_size.x / 2, screen_pos.y + 10);
+    draw_list->AddText(ImVec2(text_pos.x + 1, text_pos.y + 1), IM_COL32_BLACK, text.c_str());
+    draw_list->AddText(text_pos, IM_COL32_WHITE, text.c_str());
+}
+
 // Main rendering dispatcher - chooses between head circle or skeleton
 void esp::render_esp_for_ped(uintptr_t ped, Matrix viewport, uintptr_t localplayer) {
     switch (current_esp_mode) {
@@ -678,6 +702,8 @@ void esp::draw_head_circle_cached(uintptr_t ped, Matrix viewport, uintptr_t loca
             20,
             2.0f
         );
+
+        draw_player_info(head_screen_pos, cached_ped_data);
     }
 }
 
@@ -802,6 +828,10 @@ void esp::draw_skeleton_cached(uintptr_t ped, Matrix viewport, uintptr_t localpl
                 );
             }
         }
+    }
+
+    if (on_screen[0]) {
+        draw_player_info(screen_positions[0], cached_ped_data);
     }
 
     // Cleanup old cache entries periodically
@@ -1069,4 +1099,3 @@ void esp::clear_skeleton_cache() {
 
 void esp::set_use_cache(bool use) { use_cache = use; }
 bool esp::get_use_cache() { return use_cache; }
-

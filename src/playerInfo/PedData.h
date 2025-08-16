@@ -9,11 +9,12 @@ struct PedData {
     float health;
     Vec3 position_origin;
     uintptr_t playerInfo;
+    int netId;
     std::chrono::steady_clock::time_point lastUpdate;
     bool isValid;
 
     PedData() : health(0.0f), position_origin{}, playerInfo(0),
-        lastUpdate(std::chrono::steady_clock::now()), isValid(false) {
+        netId(0), lastUpdate(std::chrono::steady_clock::now()), isValid(false) {
     }
 };
 

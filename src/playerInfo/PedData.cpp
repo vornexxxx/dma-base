@@ -49,6 +49,7 @@ void PedCacheManager::slowCache() {
     if (!pedIds.empty()) {
         healthValues.resize(pedIds.size());
         playerInfoValues.resize(pedIds.size());
+        std::vector<int> netIdValues(pedIds.size(), 0);
 
         auto handle = mem.CreateScatterHandle();
 
@@ -63,12 +64,23 @@ void PedCacheManager::slowCache() {
         mem.ExecuteReadScatter(handle);
         mem.CloseScatterHandle(handle);
 
+        auto netIdHandle = mem.CreateScatterHandle();
+        for (size_t i = 0; i < pedIds.size(); ++i) {
+            if (playerInfoValues[i]) {
+                mem.AddScatterReadRequest(netIdHandle, playerInfoValues[i] + FiveM::offset::PlayerNetID, &netIdValues[i], sizeof(int));
+            }
+        }
+        mem.ExecuteReadScatter(netIdHandle);
+        mem.CloseScatterHandle(netIdHandle);
+
+
         // Update cache with read values
         for (size_t i = 0; i < pedIds.size(); ++i) {
             auto it = pedCache.find(pedIds[i]);
             if (it != pedCache.end()) {
                 it->second.health = healthValues[i];
                 it->second.playerInfo = playerInfoValues[i];
+                it->second.netId = netIdValues[i];
             }
         }
 
