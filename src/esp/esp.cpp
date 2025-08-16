@@ -22,6 +22,7 @@ bool esp::use_cache = true;
 bool esp::use_batch_skeleton = true;  // NEW: Enable batch skeleton by default
 bool esp::show_net_id = false;
 bool esp::show_health_bar = true;
+bool esp::show_player_name = false;
 
 // Enhanced skeleton data structure for caching
 struct CachedSkeletonData {
@@ -270,6 +271,14 @@ void esp::set_show_health_bar(bool show) {
 
 bool esp::get_show_health_bar() {
     return show_health_bar;
+}
+
+void esp::set_show_player_name(bool show) {
+    show_player_name = show;
+}
+
+bool esp::get_show_player_name() {
+    return show_player_name;
 }
 
 // NEW: Batch skeleton reading implementation
@@ -609,30 +618,48 @@ void esp::render_head_circle_esp_batch() {
 }
 
 void draw_player_info(const Vec2& screen_pos, const PedData& ped_data) {
-    if (!esp::show_net_id || ped_data.netId <= 0) {
+    if ((!esp::show_net_id || ped_data.netId <= 0) && (!esp::show_player_name || ped_data.playerName.empty())) {
         return;
     }
+
     ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
-    std::string text = "ID: " + std::to_string(ped_data.netId);
+    std::string text;
+
+    if (esp::show_player_name && !ped_data.playerName.empty()) {
+        text += ped_data.playerName;
+    }
+    if (esp::show_net_id && ped_data.netId > 0) {
+        if (!text.empty()) {
+            text += " ";
+        }
+        text += "[ID: " + std::to_string(ped_data.netId) + "]";
+    }
+
+    if (text.empty()) {
+        return;
+    }
+
     ImVec2 text_size = ImGui::CalcTextSize(text.c_str());
 
-    // Draw text with a black outline for better visibility
-    ImVec2 text_pos = ImVec2(screen_pos.x - text_size.x / 2, screen_pos.y - 30);
+    // Draw text with a black outline for better visibility, higher up
+    ImVec2 text_pos = ImVec2(screen_pos.x - text_size.x / 2, screen_pos.y - 45);
     draw_list->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 1.2f, ImVec2(text_pos.x + 1, text_pos.y + 1), IM_COL32_BLACK, text.c_str());
     draw_list->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 1.2f, text_pos, IM_COL32_WHITE, text.c_str());
 }
 
-void esp::draw_health_bar(const Vec2& screen_pos, float health, float max_health) {
+void esp::draw_health_bar(const Vec2& foot_pos, const Vec2& head_pos, float health, float max_health) {
     if (!show_health_bar) return;
 
     ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
 
-    float height = 50.0f;
+    float height = foot_pos.y - head_pos.y;
+    if (height <= 0) return;
+
     float width = 5.0f;
     float margin = 15.0f;
 
-    Vec2 bar_start = { screen_pos.x - margin - width, screen_pos.y - height / 2 };
-    Vec2 bar_end = { screen_pos.x - margin, screen_pos.y + height / 2 };
+    Vec2 bar_start = { head_pos.x - margin - width, head_pos.y };
+    Vec2 bar_end = { head_pos.x - margin, foot_pos.y };
 
     // Background
     draw_list->AddRectFilled(ImVec2(bar_start.x, bar_start.y), ImVec2(bar_end.x, bar_end.y), IM_COL32(0, 0, 0, 180));
@@ -724,7 +751,8 @@ void esp::draw_head_circle_cached(uintptr_t ped, Matrix viewport, uintptr_t loca
         head_world_pos.z += 1.0f; // Approximate head height offset
     }
 
-    if (head_world_pos.world_to_screen(viewport, head_screen_pos)) {
+    Vec2 foot_screen_pos;
+    if (head_world_pos.world_to_screen(viewport, head_screen_pos) && cached_ped_data.position_origin.world_to_screen(viewport, foot_screen_pos)) {
         // Determine color based on health
         ImU32 color = circle_color; // Default color
         if (cached_ped_data.health < 50.0f) {
@@ -747,7 +775,7 @@ void esp::draw_head_circle_cached(uintptr_t ped, Matrix viewport, uintptr_t loca
         );
 
         draw_player_info(head_screen_pos, cached_ped_data);
-        draw_health_bar(head_screen_pos, cached_ped_data.health);
+        draw_health_bar(foot_screen_pos, head_screen_pos, cached_ped_data.health);
     }
 }
 
@@ -874,9 +902,9 @@ void esp::draw_skeleton_cached(uintptr_t ped, Matrix viewport, uintptr_t localpl
         }
     }
 
-    if (on_screen[0]) {
+    if (on_screen[0] && on_screen[6]) {
         draw_player_info(screen_positions[0], cached_ped_data);
-        draw_health_bar(screen_positions[0], cached_ped_data.health);
+        draw_health_bar(screen_positions[6], screen_positions[0], cached_ped_data.health);
     }
 
     // Cleanup old cache entries periodically

@@ -5,6 +5,7 @@
 #include "../globals.h"
 #include "../esp/esp.h"
 #include <iostream>
+#include <array>
 
 // Global cache manager instance
 PedCacheManager g_pedCacheManager;
@@ -50,37 +51,54 @@ void PedCacheManager::slowCache() {
         healthValues.resize(pedIds.size());
         playerInfoValues.resize(pedIds.size());
         std::vector<int> netIdValues(pedIds.size(), 0);
+        std::vector<uintptr_t> namePtrValues(pedIds.size(), 0);
+        std::vector<std::array<char, 64>> nameBuffers(pedIds.size());
 
         auto handle = mem.CreateScatterHandle();
 
-        // Batch read health and playerInfo
+        // Batch read health and playerInfo pointers
         for (size_t i = 0; i < pedIds.size(); ++i) {
-            mem.AddScatterReadRequest(handle, pedIds[i] + FiveM::offset::playerHealth,
-                &healthValues[i], sizeof(float));
-            mem.AddScatterReadRequest(handle, pedIds[i] + FiveM::offset::playerInfo,
-                &playerInfoValues[i], sizeof(uintptr_t));
+            mem.AddScatterReadRequest(handle, pedIds[i] + FiveM::offset::playerHealth, &healthValues[i], sizeof(float));
+            mem.AddScatterReadRequest(handle, pedIds[i] + FiveM::offset::playerInfo, &playerInfoValues[i], sizeof(uintptr_t));
         }
-
         mem.ExecuteReadScatter(handle);
         mem.CloseScatterHandle(handle);
 
-        auto netIdHandle = mem.CreateScatterHandle();
+        auto infoHandle = mem.CreateScatterHandle();
+        // Batch read NetID and Name Pointers from playerInfo pointers
         for (size_t i = 0; i < pedIds.size(); ++i) {
             if (playerInfoValues[i]) {
-                mem.AddScatterReadRequest(netIdHandle, playerInfoValues[i] + FiveM::offset::PlayerNetID, &netIdValues[i], sizeof(int));
+                mem.AddScatterReadRequest(infoHandle, playerInfoValues[i] + FiveM::offset::PlayerNetID, &netIdValues[i], sizeof(int));
+                mem.AddScatterReadRequest(infoHandle, playerInfoValues[i] + FiveM::offset::playerNamePtr, &namePtrValues[i], sizeof(uintptr_t));
             }
         }
-        mem.ExecuteReadScatter(netIdHandle);
-        mem.CloseScatterHandle(netIdHandle);
+        mem.ExecuteReadScatter(infoHandle);
+        mem.CloseScatterHandle(infoHandle);
 
+        auto nameHandle = mem.CreateScatterHandle();
+        // Batch read Names from name pointers
+        for (size_t i = 0; i < pedIds.size(); ++i) {
+            if (namePtrValues[i]) {
+                mem.AddScatterReadRequest(nameHandle, namePtrValues[i], nameBuffers[i].data(), 63); // Read 63 chars
+            }
+        }
+        mem.ExecuteReadScatter(nameHandle);
+        mem.CloseScatterHandle(nameHandle);
 
-        // Update cache with read values
+        // Update cache with all read values
         for (size_t i = 0; i < pedIds.size(); ++i) {
             auto it = pedCache.find(pedIds[i]);
             if (it != pedCache.end()) {
                 it->second.health = healthValues[i];
                 it->second.playerInfo = playerInfoValues[i];
                 it->second.netId = netIdValues[i];
+                if (namePtrValues[i]) {
+                    nameBuffers[i][63] = '\0'; // Ensure null termination
+                    it->second.playerName = std::string(nameBuffers[i].data());
+                }
+                else {
+                    it->second.playerName.clear();
+                }
             }
         }
 

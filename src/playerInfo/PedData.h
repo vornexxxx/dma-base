@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <chrono>
+#include <string>
 #include "../math/math.h"
 
 // Define the structure for storing ped data
@@ -10,6 +11,7 @@ struct PedData {
     Vec3 position_origin;
     uintptr_t playerInfo;
     int netId;
+    std::string playerName;
     std::chrono::steady_clock::time_point lastUpdate;
     bool isValid;
 

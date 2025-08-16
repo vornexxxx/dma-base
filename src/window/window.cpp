@@ -16,6 +16,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 static bool enableESP = true; // checkbox state
 static bool enableAimbot = false; // checkbox state
 static bool showHealthBar = true;
+static bool showPlayerName = false;
 
 LRESULT CALLBACK window_procedure(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -468,6 +469,10 @@ void Overlay::Render()
 
 				if (ImGui::Checkbox("Show Health Bar", &showHealthBar)) {
 					esp::set_show_health_bar(showHealthBar);
+				}
+
+				if (ImGui::Checkbox("Show Player Name", &showPlayerName)) {
+					esp::set_show_player_name(showPlayerName);
 				}
 
 

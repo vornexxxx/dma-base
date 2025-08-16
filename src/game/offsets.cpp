@@ -9,7 +9,7 @@
 namespace FiveM {
     namespace offset {
         uintptr_t world, replay, viewport, camera, localplayer;
-        uintptr_t boneList, boneMatrix = 0x60, PlayerNetID = 0xE8;
+        uintptr_t boneList, boneMatrix = 0x60, PlayerNetID = 0xE8, playerNamePtr = 0xA4;
         uintptr_t playerInfo, playerHealth = 0x280, playerPosition = 0x90;
         uintptr_t base;
         int buildVersion = 0;
